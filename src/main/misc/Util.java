@@ -16,14 +16,14 @@ public class Util {
         return Imgcodecs.imread(getResource(filename), imgcodecs);
     }
 
-    public static String getResource(final String filename){
+    public static String getResource(final String filename) {
         return Util.class.getResource("/" + filename).getPath().substring(1);
     }
 
-    public static void loadLibrairies(){
+    public static void loadLibrairies() {
         try {
             UIManager.setLookAndFeel(new DarculaLaf());
-        } catch (UnsupportedLookAndFeelException ignored) {
+        } catch (final UnsupportedLookAndFeelException ignored) {
         }
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
