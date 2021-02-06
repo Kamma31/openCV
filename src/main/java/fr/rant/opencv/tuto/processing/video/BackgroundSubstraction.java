@@ -25,7 +25,8 @@ public class BackgroundSubstraction {
 
     public static void run() {
         src = new Mat();
-        cap = new VideoCapture(0);
+        cap = new VideoCapture();
+        cap.open(0);
         cap.read(src);
         backSubMOG2 = Video.createBackgroundSubtractorMOG2();
         backSubKNN = Video.createBackgroundSubtractorKNN();

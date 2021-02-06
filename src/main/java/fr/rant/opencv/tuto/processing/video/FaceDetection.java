@@ -20,7 +20,8 @@ public class FaceDetection {
 
     public static void run() {
         final Mat matFrame = new Mat();
-        cap = new VideoCapture(0);
+        cap = new VideoCapture();
+        cap.open(0);
         cap.read(matFrame);
 
         frame = new JFrame("Face detection");
@@ -47,10 +48,10 @@ public class FaceDetection {
         @Override
         protected Void doInBackground() {
             final CascadeClassifier faceClassifier = new CascadeClassifier();
-            final CascadeClassifier profileClassifier = new CascadeClassifier();
+//            final CascadeClassifier profileClassifier = new CascadeClassifier();
             faceClassifier.load(Util.getResource("xml/lbpcascade_frontalface.xml"));
-            profileClassifier.load(Util.getResource("xml/haarcascade_profileface.xml"));
-            classifiers = new CascadeClassifier[]{faceClassifier, profileClassifier};
+//            profileClassifier.load(Util.getResource("xml/haarcascade_profileface.xml"));
+            classifiers = new CascadeClassifier[]{faceClassifier};//, profileClassifier};
             final Mat matFrame = new Mat();
             while (!isCancelled()) {
                 if (!cap.read(matFrame)) {

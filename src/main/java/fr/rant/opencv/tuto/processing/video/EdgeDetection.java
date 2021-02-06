@@ -33,7 +33,8 @@ public class EdgeDetection {
 
     public static void run() {
         src = new Mat();
-        cap = new VideoCapture(0);
+        cap = new VideoCapture();
+        cap.open(0);
         cap.read(src);
 
         frame = new JFrame(WINDOW_NAME);

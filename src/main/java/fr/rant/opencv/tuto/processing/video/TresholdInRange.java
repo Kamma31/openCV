@@ -30,7 +30,8 @@ public class TresholdInRange {
 
     public static void run() {
         final Mat matFrame = new Mat();
-        cap = new VideoCapture(0);
+        cap = new VideoCapture();
+        cap.open(0);
         cap.read(matFrame);
 
         initMainFrame(matFrame);
