@@ -1,13 +1,15 @@
 package fr.rant.opencv.tuto.processing.images;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.Size;
 
 import javax.swing.*;
 import java.awt.*;
+
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 public class ErodeDilate {
     private static final String[] ELEMENT_TYPE = {"Rectangle", "Cross", "Ellipse"};
@@ -15,7 +17,7 @@ public class ErodeDilate {
     private static final int MAX_KERNEL_SIZE = 21;
     private static Mat matImgSrc;
     private static Mat matImgDst;
-    private static int elementType = Imgproc.CV_SHAPE_RECT;
+    private static int elementType = CV_SHAPE_RECT;
     private static int kernelSize = 0;
     private static boolean doErosion = true;
     private static JFrame frame;
@@ -39,11 +41,11 @@ public class ErodeDilate {
         elementTypeBox.addActionListener(e -> {
             final JComboBox<String> cb = (JComboBox<String>) e.getSource();
             if (cb.getSelectedIndex() == 0) {
-                elementType = Imgproc.CV_SHAPE_RECT;
+                elementType = CV_SHAPE_RECT;
             } else if (cb.getSelectedIndex() == 1) {
-                elementType = Imgproc.CV_SHAPE_CROSS;
+                elementType = CV_SHAPE_CROSS;
             } else if (cb.getSelectedIndex() == 2) {
-                elementType = Imgproc.CV_SHAPE_ELLIPSE;
+                elementType = CV_SHAPE_ELLIPSE;
             }
             update();
         });
@@ -68,7 +70,7 @@ public class ErodeDilate {
         });
         sliderPanel.add(morphOpBox);
         frame.add(sliderPanel, BorderLayout.PAGE_START);
-        imgLabel = new JLabel(new ImageIcon(HighGui.toBufferedImage(matImgSrc)));
+        imgLabel = new JLabel(new ImageIcon(Java2DFrameUtils.toBufferedImage(matImgSrc)));
         frame.add(imgLabel, BorderLayout.CENTER);
 
         frame.pack();
@@ -76,15 +78,14 @@ public class ErodeDilate {
     }
 
     private static void update() {
-        final Mat element = Imgproc.getStructuringElement(elementType, new Size(2d * kernelSize + 1, 2d * kernelSize + 1),
-                new org.opencv.core.Point(kernelSize, kernelSize));
+        final Mat element = getStructuringElement(elementType, new Size(2 * kernelSize + 1, 2 * kernelSize + 1),
+                new Point(kernelSize, kernelSize));
         if (doErosion) {
-            Imgproc.erode(matImgSrc, matImgDst, element);
+            erode(matImgSrc, matImgDst, element);
         } else {
-            Imgproc.dilate(matImgSrc, matImgDst, element);
+            dilate(matImgSrc, matImgDst, element);
         }
-        final Image img = HighGui.toBufferedImage(matImgDst);
-        imgLabel.setIcon(new ImageIcon(img));
+        imgLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(matImgDst)));
         frame.repaint();
     }
 

@@ -1,31 +1,43 @@
 package fr.rant.opencv.tuto.processing.video;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.*;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.objdetect.CascadeClassifier;
-import org.opencv.videoio.VideoCapture;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.javacv.OpenCVFrameConverter;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.RectVector;
+import org.bytedeco.opencv.opencv_core.Size;
+import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Arrays;
 import java.util.List;
 
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
+import static org.bytedeco.opencv.opencv_core.AbstractScalar.GREEN;
+
 public class FaceDetection {
-    private static VideoCapture cap;
+    private static FrameGrabber frameGrabber;
+    private static final OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
     private static CaptureTask captureTask;
     private static JLabel label;
     private static JFrame frame;
 
     public static void run() {
-        final Mat matFrame = new Mat();
-        cap = new VideoCapture();
-        cap.open(0);
-        cap.read(matFrame);
+        Mat matFrame = new Mat();
+        try {
+            frameGrabber = FrameGrabber.createDefault(0);
+            frameGrabber.start();
+            matFrame = converter.convert(frameGrabber.grab());
+        } catch (final FrameGrabber.Exception e) {
+            e.printStackTrace();
+        }
 
         frame = new JFrame("Face detection");
-        label = new JLabel(new ImageIcon(HighGui.toBufferedImage(matFrame)));
+        label = new JLabel(new ImageIcon(Java2DFrameUtils.toBufferedImage(matFrame)));
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -46,18 +58,13 @@ public class FaceDetection {
         private CascadeClassifier[] classifiers;
 
         @Override
-        protected Void doInBackground() {
+        protected Void doInBackground() throws FrameGrabber.Exception {
             final CascadeClassifier faceClassifier = new CascadeClassifier();
-//            final CascadeClassifier profileClassifier = new CascadeClassifier();
             faceClassifier.load(Util.getResource("xml/lbpcascade_frontalface.xml"));
-//            profileClassifier.load(Util.getResource("xml/haarcascade_profileface.xml"));
-            classifiers = new CascadeClassifier[]{faceClassifier};//, profileClassifier};
-            final Mat matFrame = new Mat();
+            classifiers = new CascadeClassifier[]{faceClassifier};
+
             while (!isCancelled()) {
-                if (!cap.read(matFrame)) {
-                    break;
-                }
-                publish(matFrame.clone());
+                publish(converter.convert(frameGrabber.grab()).clone());
             }
             return null;
         }
@@ -66,20 +73,19 @@ public class FaceDetection {
         protected void process(final List<Mat> images) {
             final Mat img = images.get(images.size() - 1);
             final Mat grayImg = new Mat();
-            Imgproc.cvtColor(img, grayImg, Imgproc.COLOR_BGR2GRAY);
-            Imgproc.equalizeHist(grayImg, grayImg);
+            cvtColor(img, grayImg, COLOR_BGR2GRAY);
+            equalizeHist(grayImg, grayImg);
 
             for (final CascadeClassifier classifier : classifiers) {
-                final MatOfRect mat = new MatOfRect();
+                final RectVector mat = new RectVector();
                 classifier.detectMultiScale(grayImg, mat);
-                final List<Rect> listOfDetected = mat.toList();
-                listOfDetected.forEach(detected -> {
-                    final Point center = new Point(detected.x + detected.width / 2d, detected.y + detected.height / 2d);
-                    Imgproc.ellipse(img, center, new Size(detected.width / 2d, detected.height / 2d), 0, 0, 360,
-                            new Scalar(255, 0, 255));
+                Arrays.stream(mat.get()).parallel().forEach(detected -> {
+                    final Point center = new Point(detected.x() + detected.width() / 2, detected.y() + detected.height() / 2);
+                    ellipse(img, center, new Size(detected.width() / 2, detected.height() / 2), 0, 0, 360,
+                            GREEN);
                 });
             }
-            label.setIcon(new ImageIcon(HighGui.toBufferedImage(img)));
+            label.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(img)));
             frame.repaint();
         }
     }

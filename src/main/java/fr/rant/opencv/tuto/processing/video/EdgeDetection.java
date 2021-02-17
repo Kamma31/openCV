@@ -1,10 +1,14 @@
 package fr.rant.opencv.tuto.processing.video;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.*;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.videoio.VideoCapture;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.javacv.OpenCVFrameConverter;
+import org.bytedeco.opencv.global.opencv_core;
+import org.bytedeco.opencv.global.opencv_imgproc;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Scalar;
+import org.bytedeco.opencv.opencv_core.Size;
 
 import javax.swing.*;
 import java.awt.*;
@@ -12,33 +16,45 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.List;
 
+import static org.bytedeco.opencv.global.opencv_core.*;
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
+
 public class EdgeDetection {
-    private static final String WINDOW_NAME = "Edge Detection";
+    private static FrameGrabber frameGrabber;
+    private static final OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
     private static final String[] OPERATION = {"Sobel", "Scharr", "Laplace", "Canny"};
     private static final int MAX_LOW_THRESHOLD = 100;
     private static final int KERNEL_SIZE = 3;
     private static final double RATIO = 3;
     private static final int SCALE = 1;
     private static final int DELTA = 0;
-    private static final int DDEPTH = CvType.CV_16S;
+    private static final int DDEPTH = opencv_core.CV_16S;
     private static final Size BLUR_SIZE = new Size(3, 3);
     private static JFrame frame;
     private static Mat src;
     private static JLabel imgCaptureLabel;
     private static JLabel imgResLabel;
-    private static VideoCapture cap;
     private static CaptureTask captureTask;
     private static JComboBox<String> operationBox;
     private static JSlider slider;
 
     public static void run() {
-        src = new Mat();
-        cap = new VideoCapture();
-        cap.open(0);
-        cap.read(src);
+        try {
+            frameGrabber = FrameGrabber.createDefault(0);
+            frameGrabber.start();
+            src = converter.convert(frameGrabber.grab());
+        } catch (final FrameGrabber.Exception e) {
+            e.printStackTrace();
+        }
 
-        frame = new JFrame(WINDOW_NAME);
-        initFrame(frame.getContentPane());
+        initFrame();
+
+        captureTask = new CaptureTask();
+        captureTask.execute();
+    }
+
+    private static void initFrame() {
+        frame = new JFrame("Edge Detection");
         frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -47,22 +63,6 @@ public class EdgeDetection {
             }
         });
 
-        final Image imgSrc = HighGui.toBufferedImage(src);
-        final JPanel framePanel = new JPanel();
-        imgCaptureLabel = new JLabel(new ImageIcon(imgSrc));
-        framePanel.add(imgCaptureLabel);
-        imgResLabel = new JLabel(new ImageIcon(imgSrc));
-        framePanel.add(imgResLabel);
-        frame.add(framePanel, BorderLayout.CENTER);
-
-        frame.pack();
-        frame.setVisible(true);
-
-        captureTask = new CaptureTask();
-        captureTask.execute();
-    }
-
-    private static void initFrame(final Container contentPane) {
         final JPanel controlPanel = new JPanel();
         operationBox = new JComboBox<>(OPERATION);
         operationBox.setSelectedIndex(0);
@@ -83,20 +83,28 @@ public class EdgeDetection {
 
         controlPanel.add(sliderPanel);
 
-        contentPane.add(controlPanel, BorderLayout.PAGE_START);
+        frame.add(controlPanel, BorderLayout.PAGE_START);
+
+        final Image imgSrc = Java2DFrameUtils.toBufferedImage(src);
+        final JPanel framePanel = new JPanel();
+        imgCaptureLabel = new JLabel(new ImageIcon(imgSrc));
+        framePanel.add(imgCaptureLabel);
+        imgResLabel = new JLabel(new ImageIcon(imgSrc));
+        framePanel.add(imgResLabel);
+        frame.add(framePanel, BorderLayout.CENTER);
+
+        frame.pack();
+        frame.setVisible(true);
     }
 
-    private static class CaptureTask extends SwingWorker<Void, Mat> {
+    private static class CaptureTask
+            extends SwingWorker<Void, Mat> {
         private Mat thresh;
 
         @Override
-        protected Void doInBackground() {
-            final Mat matFrame = new Mat();
+        protected Void doInBackground() throws FrameGrabber.Exception {
             while (!isCancelled()) {
-                if (!cap.read(matFrame)) {
-                    break;
-                }
-                publish(matFrame.clone());
+                publish(converter.convert(frameGrabber.grab()).clone());
             }
             return null;
         }
@@ -128,8 +136,8 @@ public class EdgeDetection {
         }
 
         private static void update(final Mat imgThresh) {
-            imgCaptureLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(src)));
-            imgResLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(imgThresh)));
+            imgCaptureLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(src)));
+            imgResLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(imgThresh)));
             frame.repaint();
         }
 
@@ -139,25 +147,25 @@ public class EdgeDetection {
             final Mat dst = new Mat();
 
             // Remove noise by blurring with a Gaussian filter ( kernel size = 3 )
-            Imgproc.GaussianBlur(src, dst, new Size(3, 3), 0, 0, Core.BORDER_DEFAULT);
+            GaussianBlur(src, dst, new Size(3, 3), 0, 0, BORDER_DEFAULT);
             // Convert the image to grayscale
-            Imgproc.cvtColor(dst, srcGray, Imgproc.COLOR_RGB2GRAY);
+            cvtColor(dst, srcGray, opencv_imgproc.COLOR_RGB2GRAY);
             final Mat gradX = new Mat();
             final Mat gradY = new Mat();
             final Mat absGradX = new Mat();
             final Mat absGradY = new Mat();
             if (OPERATION[0].equals(operation)) {
-                Imgproc.Sobel(srcGray, gradX, DDEPTH, 1, 0, 3, SCALE, DELTA, Core.BORDER_DEFAULT);
-                Imgproc.Sobel(srcGray, gradY, DDEPTH, 0, 1, 3, SCALE, DELTA, Core.BORDER_DEFAULT);
+                Sobel(srcGray, gradX, DDEPTH, 1, 0, 3, SCALE, DELTA, BORDER_DEFAULT);
+                Sobel(srcGray, gradY, DDEPTH, 0, 1, 3, SCALE, DELTA, BORDER_DEFAULT);
             }
             if (OPERATION[1].equals(operation)) {
-                Imgproc.Scharr(srcGray, gradX, DDEPTH, 1, 0, SCALE, DELTA, Core.BORDER_DEFAULT);
-                Imgproc.Scharr(srcGray, gradY, DDEPTH, 0, 1, SCALE, DELTA, Core.BORDER_DEFAULT);
+                Scharr(srcGray, gradX, DDEPTH, 1, 0, SCALE, DELTA, BORDER_DEFAULT);
+                Scharr(srcGray, gradY, DDEPTH, 0, 1, SCALE, DELTA, BORDER_DEFAULT);
             }
             // converting back to CV_8U
-            Core.convertScaleAbs(gradX, absGradX);
-            Core.convertScaleAbs(gradY, absGradY);
-            Core.addWeighted(absGradX, 0.5, absGradY, 0.5, 0, grad);
+            convertScaleAbs(gradX, absGradX);
+            convertScaleAbs(gradY, absGradY);
+            addWeighted(absGradX, 0.5, absGradY, 0.5, 0, grad);
 
             return grad;
         }
@@ -169,11 +177,11 @@ public class EdgeDetection {
 
             final int kernelSize = 3;
 
-            Imgproc.GaussianBlur(src, blurr, new Size(3, 3), 0, 0, Core.BORDER_DEFAULT);
-            Imgproc.cvtColor(blurr, srcGray, Imgproc.COLOR_RGB2GRAY);
+            GaussianBlur(src, blurr, new Size(3, 3), 0, 0, BORDER_DEFAULT);
+            cvtColor(blurr, srcGray, opencv_imgproc.COLOR_RGB2GRAY);
             final Mat absDst = new Mat();
-            Imgproc.Laplacian(srcGray, dst, DDEPTH, kernelSize, SCALE, DELTA, Core.BORDER_DEFAULT);
-            Core.convertScaleAbs(dst, absDst);
+            Laplacian(srcGray, dst, DDEPTH, kernelSize, SCALE, DELTA, BORDER_DEFAULT);
+            convertScaleAbs(dst, absDst);
 
             return absDst;
         }
@@ -181,9 +189,9 @@ public class EdgeDetection {
         private static Mat cannyEdgeDetector(final int lowThresh) {
             final Mat srcBlur = new Mat();
             final Mat detectedEdges = new Mat();
-            Imgproc.blur(src, srcBlur, BLUR_SIZE);
-            Imgproc.Canny(srcBlur, detectedEdges, lowThresh, lowThresh * RATIO, KERNEL_SIZE, false);
-            final Mat dst = new Mat(src.size(), CvType.CV_8UC3, Scalar.all(0));
+            blur(src, srcBlur, BLUR_SIZE);
+            Canny(srcBlur, detectedEdges, lowThresh, lowThresh * RATIO, KERNEL_SIZE, false);
+            final Mat dst = new Mat(src.size(), opencv_core.CV_8UC3, Scalar.all(0));
             src.copyTo(dst, detectedEdges);
 
             return dst;

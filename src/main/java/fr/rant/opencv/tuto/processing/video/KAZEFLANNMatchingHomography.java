@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.bytedeco.opencv.global.opencv_features2d.NOT_DRAW_SINGLE_POINTS;
+
 public class KAZEFLANNMatchingHomography {
     private static Mat src;
     private static VideoCapture cap;
@@ -29,7 +31,6 @@ public class KAZEFLANNMatchingHomography {
         cap = new VideoCapture();
         cap.open(0);
         cap.read(src);
-
         initFrame();
 
         captureTask = new CaptureTask();
@@ -68,11 +69,11 @@ public class KAZEFLANNMatchingHomography {
 
         @Override
         protected Void doInBackground() {
-            objectImg = Util.getMatResource("livre_biere.jpg");
+            objectImg = Util.getMatResourceOld("livre_biere.jpg");
 
             keypointsObject = new MatOfKeyPoint();
             detector.detectAndCompute(objectImg, new Mat(), keypointsObject, descriptorsObject);
-            
+
             objCorners = new Mat(4, 1, CvType.CV_32FC2);
             final float[] objCornersData = new float[(int) (objCorners.total() * objCorners.channels())];
             objCorners.get(0, 0, objCornersData);
@@ -122,7 +123,7 @@ public class KAZEFLANNMatchingHomography {
             //-- Draw matches
             final Mat imgMatches = new Mat();
             Features2d.drawMatches(objectImg, keypointsObject, src, keypointsScene, goodMatches, imgMatches, GREEN,
-                    GREEN, new MatOfByte()
+                    GREEN, new MatOfByte(), NOT_DRAW_SINGLE_POINTS
             );
             //-- Localize the object
             final List<Point> obj = new ArrayList<>();

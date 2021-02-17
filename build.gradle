@@ -1,5 +1,6 @@
 plugins {
-    id 'java'
+    id 'java-library'
+    id 'org.bytedeco.gradle-javacpp-platform' version "1.5.4"
 }
 
 group 'fr.rant'
@@ -12,7 +13,12 @@ repositories {
     }
 }
 
+ext {
+    javacppPlatform = 'windows-x86_64'
+}
+
 dependencies {
     implementation "org.openpnp:opencv:4.3.0-3"
-    compile group: 'org.clojars.nakkaya', name: 'darcula', version: '1.0.0'
+    compile "org.clojars.nakkaya:darcula:1.0.0"
+    api "org.bytedeco:javacv-platform:1.5.4"
 }

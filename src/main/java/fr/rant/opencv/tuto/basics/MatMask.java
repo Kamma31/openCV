@@ -18,7 +18,7 @@ public class MatMask {
     private static JLabel builtInLabel;
 
     public static void run() {
-        final Mat src = Util.getMatResource("lena.png", Imgcodecs.IMREAD_COLOR);
+        final Mat src = Util.getMatResourceOld("lena.png", Imgcodecs.IMREAD_COLOR);
         Imgproc.resize(src, src, new Size(375, 375));
         initFrame(src);
 
@@ -99,10 +99,10 @@ public class MatMask {
                 result.put(j, i, sum);
             }
         }
-        result.row(0).setTo(new Scalar(0));
-        result.row(result.rows() - 1).setTo(new Scalar(0));
-        result.col(0).setTo(new Scalar(0));
-        result.col(result.cols() - 1).setTo(new Scalar(0));
+        result.row(0).setTo(Scalar.all(0));
+        result.row(result.rows() - 1).setTo(Scalar.all(0));
+        result.col(0).setTo(Scalar.all(0));
+        result.col(result.cols() - 1).setTo(Scalar.all(0));
         return result;
     }
 

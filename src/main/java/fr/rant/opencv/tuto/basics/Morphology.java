@@ -1,24 +1,26 @@
 package fr.rant.opencv.tuto.basics;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.Size;
 
 import javax.swing.*;
 import java.awt.*;
 
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
+
 public class Morphology {
     private static final String[] MORPH_OP = {"Opening", "Closing", "Gradient", "Top Hat", "Black Hat"};
-    private static final int[] MORPH_OP_TYPE = {Imgproc.MORPH_OPEN, Imgproc.MORPH_CLOSE,
-            Imgproc.MORPH_GRADIENT, Imgproc.MORPH_TOPHAT, Imgproc.MORPH_BLACKHAT};
+    private static final int[] MORPH_OP_TYPE = {MORPH_OPEN, MORPH_CLOSE,
+            MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT};
     private static final String[] ELEMENT_TYPE = {"Rectangle", "Cross", "Ellipse"};
     private static final int MAX_KERNEL_SIZE = 21;
     private static Mat matImgSrc;
     private static Mat matImgDst;
-    private static int morphOpType = Imgproc.MORPH_OPEN;
-    private static int elementType = Imgproc.CV_SHAPE_RECT;
+    private static int morphOpType = MORPH_OPEN;
+    private static int elementType = CV_SHAPE_RECT;
     private static int kernelSize = 0;
     private static JFrame frame;
     private static JLabel imgLabel;
@@ -27,8 +29,7 @@ public class Morphology {
         matImgSrc = Util.getMatResource("butterfly.jpg");
         matImgDst = new Mat();
 
-        final Image img = HighGui.toBufferedImage(matImgSrc);
-        initMainFrame(img);
+        initMainFrame(Java2DFrameUtils.toBufferedImage(matImgSrc));
 
         frame.pack();
         frame.setVisible(true);
@@ -52,11 +53,11 @@ public class Morphology {
         elementTypeBox.addActionListener(e -> {
             final JComboBox<String> cb = (JComboBox<String>) e.getSource();
             if (cb.getSelectedIndex() == 0) {
-                elementType = Imgproc.CV_SHAPE_RECT;
+                elementType = CV_SHAPE_RECT;
             } else if (cb.getSelectedIndex() == 1) {
-                elementType = Imgproc.CV_SHAPE_CROSS;
+                elementType = CV_SHAPE_CROSS;
             } else if (cb.getSelectedIndex() == 2) {
-                elementType = Imgproc.CV_SHAPE_ELLIPSE;
+                elementType = CV_SHAPE_ELLIPSE;
             }
             update();
         });
@@ -83,11 +84,11 @@ public class Morphology {
     }
 
     private static void update() {
-        final Mat element = Imgproc.getStructuringElement(elementType, new Size(2d * kernelSize + 1, 2d * kernelSize + 1),
-                new org.opencv.core.Point(kernelSize, kernelSize));
-        Imgproc.morphologyEx(matImgSrc, matImgDst, morphOpType, element);
+        final Mat element = getStructuringElement(elementType, new Size(2 * kernelSize + 1, 2 * kernelSize + 1),
+                new Point(kernelSize, kernelSize));
+        morphologyEx(matImgSrc, matImgDst, morphOpType, element);
 
-        imgLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(matImgDst)));
+        imgLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(matImgDst)));
         frame.repaint();
     }
 

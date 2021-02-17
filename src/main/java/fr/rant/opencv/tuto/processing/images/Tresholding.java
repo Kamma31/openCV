@@ -2,13 +2,14 @@ package fr.rant.opencv.tuto.processing.images;
 
 import fr.rant.opencv.TresholdType;
 import fr.rant.opencv.Util;
-import org.opencv.core.Mat;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
+
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 public class Tresholding {
     private static int thresholdValue = 0;
@@ -23,19 +24,18 @@ public class Tresholding {
         srcGray = new Mat();
         dst = new Mat();
         // Convert the image to Gray
-        Imgproc.cvtColor(src, srcGray, Imgproc.COLOR_BGR2GRAY);
+        cvtColor(src, srcGray, COLOR_BGR2GRAY);
 
         frame = new JFrame("Threshold");
         frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        final Image img = HighGui.toBufferedImage(srcGray);
-        addComponentsToPane(frame.getContentPane(), img);
+        addComponentsToPane(frame.getContentPane());
 
         frame.pack();
         frame.setVisible(true);
     }
 
-    private static void addComponentsToPane(final Container pane, final Image img) {
+    private static void addComponentsToPane(final Container pane) {
         final JPanel sliderPanel = new JPanel();
         sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.PAGE_AXIS));
 
@@ -62,14 +62,13 @@ public class Tresholding {
             update();
         });
         pane.add(sliderPanel, BorderLayout.PAGE_START);
-        imgLabel = new JLabel(new ImageIcon(img));
+        imgLabel = new JLabel(new ImageIcon(Java2DFrameUtils.toBufferedImage(srcGray)));
         pane.add(imgLabel, BorderLayout.CENTER);
     }
 
     private static void update() {
-        Imgproc.threshold(srcGray, dst, thresholdValue, 255, thresholdType);
-        final Image img = HighGui.toBufferedImage(dst);
-        imgLabel.setIcon(new ImageIcon(img));
+        threshold(srcGray, dst, thresholdValue, 255, thresholdType);
+        imgLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(dst)));
         frame.repaint();
     }
 

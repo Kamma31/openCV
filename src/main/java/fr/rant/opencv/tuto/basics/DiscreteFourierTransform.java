@@ -1,15 +1,15 @@
 package fr.rant.opencv.tuto.basics;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.*;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+
+import static org.bytedeco.opencv.global.opencv_core.*;
+import static org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_GRAYSCALE;
+import static org.bytedeco.opencv.global.opencv_imgproc.resize;
 
 public class DiscreteFourierTransform {
     private static JFrame frame;
@@ -17,10 +17,10 @@ public class DiscreteFourierTransform {
     private static JLabel inclineLabel;
 
     public static void run() {
-        final Mat matDroit = Util.getMatResource("hand_writed.jpg", Imgcodecs.IMREAD_GRAYSCALE);
-        final Mat matIncl = Util.getMatResource("hand_writed_incl.jpg", Imgcodecs.IMREAD_GRAYSCALE);
-        Imgproc.resize(matDroit, matDroit, new Size(530, 530));
-        Imgproc.resize(matIncl, matIncl, new Size(530, 530));
+        final Mat matDroit = Util.getMatResource("hand_writed.jpg", IMREAD_GRAYSCALE);
+        final Mat matIncl = Util.getMatResource("hand_writed_incl.jpg", IMREAD_GRAYSCALE);
+        resize(matDroit, matDroit, new Size(530, 530));
+        resize(matIncl, matIncl, new Size(530, 530));
 
         initMainFrame(matDroit, matIncl);
 
@@ -39,7 +39,7 @@ public class DiscreteFourierTransform {
         final JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         final JLabel srcLeftLabel = new JLabel();
-        srcLeftLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(matDroit)));
+        srcLeftLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(matDroit)));
         droitLabel = new JLabel();
         leftPanel.add(srcLeftLabel);
         leftPanel.add(droitLabel);
@@ -47,7 +47,7 @@ public class DiscreteFourierTransform {
         final JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         final JLabel srcRightLabel = new JLabel();
-        srcRightLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(matIncl)));
+        srcRightLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(matIncl)));
         inclineLabel = new JLabel();
         rightPanel.add(srcRightLabel);
         rightPanel.add(inclineLabel);
@@ -63,35 +63,33 @@ public class DiscreteFourierTransform {
     private static void doDFT(final Mat mat, final JLabel label) {
         final Mat padded = new Mat();
         //expand input image to optimal size
-        final int m = Core.getOptimalDFTSize(mat.rows());
-        final int n = Core.getOptimalDFTSize(mat.cols());
+        final int m = getOptimalDFTSize(mat.rows());
+        final int n = getOptimalDFTSize(mat.cols());
         // on the border add zero values
-        Core.copyMakeBorder(mat, padded, 0, m - mat.rows(), 0, n - mat.cols(), Core.BORDER_CONSTANT, Scalar.all(0));
-        final List<Mat> planes = new ArrayList<>();
-        padded.convertTo(padded, CvType.CV_32F);
-        planes.add(padded);
-        planes.add(Mat.zeros(padded.size(), CvType.CV_32F));
+        copyMakeBorder(mat, padded, 0, m - mat.rows(), 0, n - mat.cols(), BORDER_CONSTANT, Scalar.all(0));
+        padded.convertTo(padded, CV_32F);
+        final MatVector planes = new MatVector(padded, Mat.zeros(padded.size(), CV_32F).asMat());
         final Mat complexI = new Mat();
-        Core.merge(planes, complexI);         // Add to the expanded another plane with zeros
-        Core.dft(complexI, complexI);         // this way the result may fit in the source matrix
+        merge(planes, complexI);         // Add to the expanded another plane with zeros
+        dft(complexI, complexI);         // this way the result may fit in the source matrix
         // compute the magnitude and switch to logarithmic scale
         // => log(1 + sqrt(Re(DFT(mat))^2 + Im(DFT(mat))^2))
-        Core.split(complexI, planes);                               // planes.get(0) = Re(DFT(mat)
+        split(complexI, planes);                               // planes.get(0) = Re(DFT(mat)
         // planes.get(1) = Im(DFT(mat))
-        Core.magnitude(planes.get(0), planes.get(1), planes.get(0));// planes.get(0) = magnitude
+        magnitude(planes.get(0), planes.get(1), planes.get(0));// planes.get(0) = magnitude
         Mat magI = planes.get(0);
-        final Mat matOfOnes = Mat.ones(magI.size(), magI.type());
-        Core.add(matOfOnes, magI, magI);         // switch to logarithmic scale
-        Core.log(magI, magI);
+        final Mat matOfOnes = Mat.ones(magI.size(), magI.type()).asMat();
+        add(matOfOnes, magI, magI);         // switch to logarithmic scale
+        log(magI, magI);
         // crop the spectrum, if it has an odd number of rows or columns
-        magI = magI.submat(new Rect(0, 0, magI.cols() & -2, magI.rows() & -2));
+        magI = magI.apply(new Rect(0, 0, magI.cols() & -2, magI.rows() & -2));
         // rearrange the quadrants of Fourier image  so that the origin is at the image center
         final int cx = magI.cols() / 2;
         final int cy = magI.rows() / 2;
-        final Mat q0 = new Mat(magI, new Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
-        final Mat q1 = new Mat(magI, new Rect(cx, 0, cx, cy));  // Top-Right
-        final Mat q2 = new Mat(magI, new Rect(0, cy, cx, cy));  // Bottom-Left
-        final Mat q3 = new Mat(magI, new Rect(cx, cy, cx, cy)); // Bottom-Right
+        final Mat q0 = magI.apply(new Rect(0, 0, cx, cy));   // Top-Left - Create a ROI per quadrant
+        final Mat q1 = magI.apply(new Rect(cx, 0, cx, cy));  // Top-Right
+        final Mat q2 = magI.apply(new Rect(0, cy, cx, cy));  // Bottom-Left
+        final Mat q3 = magI.apply(new Rect(cx, cy, cx, cy)); // Bottom-Right
         // swap quadrants (Top-Left with Bottom-Right)
         final Mat tmp = new Mat();
         q0.copyTo(tmp);
@@ -100,12 +98,12 @@ public class DiscreteFourierTransform {
         q1.copyTo(tmp);                    // swap quadrant (Top-Right with Bottom-Left)
         q2.copyTo(q1);
         tmp.copyTo(q2);
-        magI.convertTo(magI, CvType.CV_8UC1);
+        magI.convertTo(magI, CV_8UC1);
         // Transform the matrix with float values
         // into a viewable image form (float between values 0 and 255).
-        Core.normalize(magI, magI, 0, 255, Core.NORM_MINMAX, CvType.CV_8UC1);
+        normalize(magI, magI, 0d, 255d, NORM_MINMAX, CV_8UC1, null);
 
-        label.setIcon(new ImageIcon(HighGui.toBufferedImage(magI)));
+        label.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(magI)));
     }
 
     public static void main(final String[] args) {

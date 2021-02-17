@@ -1,16 +1,19 @@
 package fr.rant.opencv.tuto.processing.images;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.AbstractScalar;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.Point3f;
+import org.bytedeco.opencv.opencv_imgproc.Vec3fVector;
 
 import javax.swing.*;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
+
+import static org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_COLOR;
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 public class CircleDetection {
     private static JFrame frame;
@@ -93,29 +96,29 @@ public class CircleDetection {
     }
 
     private static void houghCircle() {
-        final Mat img = Util.getMatResource("smarties.jpg", Imgcodecs.IMREAD_COLOR);
+        final Mat img = Util.getMatResource("smarties.jpg", IMREAD_COLOR);
 
         final Mat gray = new Mat();
-        Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGR2GRAY);
-        Imgproc.medianBlur(gray, gray, 5);
-        final Mat circles = new Mat();
-        Imgproc.HoughCircles(gray, circles, Imgproc.HOUGH_GRADIENT,
+        cvtColor(img, gray, COLOR_BGR2GRAY);
+        medianBlur(gray, gray, 5);
+        final Vec3fVector circles = new Vec3fVector();
+        HoughCircles(gray, circles, HOUGH_GRADIENT,
                 dp.getValue() / 10d, // 	Inverse ratio of the accumulator resolution to the image resolution
                 minDist.getValue(), // Min dist beetween two circles change this value to detect circles with different distances to each other
                 threshold.getValue(), // Threshold value
                 smoothness.getValue(), // Smoothness of circles, the higher the better
                 minRadius.getValue(), maxRadius.getValue()); // (min_radius & max_radius) to detect larger circles
-        for (int x = 0; x < circles.cols(); x++) {
-            final double[] c = circles.get(0, x);
-            final Point center = new Point(Math.round(c[0]), Math.round(c[1]));
+        for (int x = 0; x < circles.size(); x++) {
+            final Point3f c = circles.get(x);
+            final Point center = new Point(Math.round(c.x()), Math.round(c.y()));
             // circle center
-            Imgproc.circle(img, center, 1, new Scalar(0, 100, 100), 3, 8, 0);
+            circle(img, center, 1, AbstractScalar.GREEN, 3, 8, 0);
             // circle outline
-            final int radius = (int) Math.round(c[2]);
-            Imgproc.circle(img, center, radius, new Scalar(255, 0, 255), 3, 8, 0);
+            final int radius = Math.round(c.z());
+            circle(img, center, radius, AbstractScalar.CYAN, 3, 8, 0);
         }
 
-        label.setIcon(new ImageIcon(HighGui.toBufferedImage(img)));
+        label.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(img)));
         frame.repaint();
     }
 

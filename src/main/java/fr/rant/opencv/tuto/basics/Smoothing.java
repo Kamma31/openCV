@@ -1,17 +1,19 @@
 package fr.rant.opencv.tuto.basics;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Size;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
+import org.bytedeco.opencv.opencv_core.Point;
+import org.bytedeco.opencv.opencv_core.Size;
 
 import javax.swing.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.concurrent.TimeUnit;
+
+import static org.bytedeco.opencv.global.opencv_core.BORDER_DEFAULT;
+import static org.bytedeco.opencv.global.opencv_imgcodecs.IMREAD_COLOR;
+import static org.bytedeco.opencv.global.opencv_imgproc.*;
 
 public class Smoothing {
     private static final int MAX_KERNEL_LENGTH = 31;
@@ -23,7 +25,7 @@ public class Smoothing {
     private static JLabel bilateralLabel;
 
     public static void run() {
-        final Mat src = Util.getMatResource("butterfly.jpg", Imgcodecs.IMREAD_COLOR);
+        final Mat src = Util.getMatResource("butterfly.jpg", IMREAD_COLOR);
         initMainFrame(src);
 
         frame.addKeyListener(new KeyListener() {
@@ -50,32 +52,32 @@ public class Smoothing {
         try {
             final Mat dstBlur = src.clone();
             for (int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2) {
-                Imgproc.blur(src, dstBlur, new Size(i, i), new Point(-1, -1));
-                normalizedLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(dstBlur)));
+                blur(src, dstBlur, new Size(i, i), new Point(-1, -1), BORDER_DEFAULT);
+                normalizedLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(dstBlur)));
                 normalizedLabel.repaint();
                 time.sleep(sleeptime);
             }
 
             final Mat dstGaussian = src.clone();
             for (int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2) {
-                Imgproc.GaussianBlur(src, dstGaussian, new Size(i, i), 0, 0);
-                gaussianLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(dstGaussian)));
+                GaussianBlur(src, dstGaussian, new Size(i, i), 0, 0, BORDER_DEFAULT);
+                gaussianLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(dstGaussian)));
                 gaussianLabel.repaint();
                 time.sleep(sleeptime);
             }
 
             final Mat dstMedian = src.clone();
             for (int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2) {
-                Imgproc.medianBlur(src, dstMedian, i);
-                medianLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(dstMedian)));
+                medianBlur(src, dstMedian, i);
+                medianLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(dstMedian)));
                 medianLabel.repaint();
                 time.sleep(sleeptime);
             }
 
             final Mat dstBilateral = src.clone();
             for (int i = 1; i < MAX_KERNEL_LENGTH; i = i + 2) {
-                Imgproc.bilateralFilter(src, dstBilateral, i, i * 2d, i / 2d);
-                bilateralLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(dstBilateral)));
+                bilateralFilter(src, dstBilateral, i, i * 2d, i / 2d);
+                bilateralLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(dstBilateral)));
                 bilateralLabel.repaint();
                 time.sleep(sleeptime);
             }
@@ -85,27 +87,27 @@ public class Smoothing {
     }
 
     private static void initMainFrame(final Mat src) {
-        frame = new JFrame("Smoothing transformation");
+        frame = new JFrame("Smoothing transformation PRESS ANY KEY !!!");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
 
         final JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
         normalizedLabel = Util.newJLabel("Normalized blur");
-        normalizedLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(src)));
+        normalizedLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(src)));
 
         gaussianLabel = Util.newJLabel("Gaussian Blur");
-        gaussianLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(src)));
+        gaussianLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(src)));
         topPanel.add(normalizedLabel);
         topPanel.add(gaussianLabel);
 
         final JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.X_AXIS));
         medianLabel = Util.newJLabel("Median Blur");
-        medianLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(src)));
+        medianLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(src)));
 
         bilateralLabel = Util.newJLabel("Bilateral Blur");
-        bilateralLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(src)));
+        bilateralLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(src)));
         bottomPanel.add(medianLabel);
         bottomPanel.add(bilateralLabel);
 

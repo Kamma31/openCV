@@ -1,12 +1,10 @@
 package fr.rant.opencv.tuto.processing.video;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.Scalar;
-import org.opencv.highgui.HighGui;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.videoio.VideoCapture;
+import org.bytedeco.javacv.FrameGrabber;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.javacv.OpenCVFrameConverter;
+import org.bytedeco.opencv.opencv_core.Mat;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,12 +12,18 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.List;
 
+import static org.bytedeco.opencv.global.opencv_core.bitwise_not;
+import static org.bytedeco.opencv.global.opencv_core.inRange;
+import static org.bytedeco.opencv.global.opencv_imgproc.COLOR_BGR2HSV;
+import static org.bytedeco.opencv.global.opencv_imgproc.cvtColor;
+
 public class TresholdInRange {
-    private static final String WINDOW_NAME = "Thresholding Operations using inRange demo";
+    private static FrameGrabber frameGrabber;
+    private static final OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
     private static JFrame frame;
     private static JLabel imgCaptureLabel;
+    private static JLabel imgHsvLabel;
     private static JLabel imgDetectionLabel;
-    private static VideoCapture cap;
     private static CaptureTask captureTask;
     private static JSlider sliderLowH;
     private static JSlider sliderHighH;
@@ -29,12 +33,17 @@ public class TresholdInRange {
     private static JSlider sliderHighV;
 
     public static void run() {
-        final Mat matFrame = new Mat();
-        cap = new VideoCapture();
-        cap.open(0);
-        cap.read(matFrame);
-
-        initMainFrame(matFrame);
+        try {
+            frameGrabber = FrameGrabber.createDefault(0);
+            frameGrabber.setFormat("digrab");
+            frameGrabber.setImageWidth(576);
+            frameGrabber.setImageHeight(432);
+            frameGrabber.start();
+            final Mat matFrame = converter.convert(frameGrabber.grab());
+            initMainFrame(matFrame);
+        } catch (final FrameGrabber.Exception e) {
+            e.printStackTrace();
+        }
 
         captureTask = new CaptureTask();
         captureTask.execute();
@@ -42,7 +51,7 @@ public class TresholdInRange {
 
     private static void initMainFrame(final Mat matFrame) {
         // Create and set up the window.
-        frame = new JFrame(WINDOW_NAME);
+        frame = new JFrame("Thresholding Operations using inRange demo");
         frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -51,7 +60,7 @@ public class TresholdInRange {
             }
         });
         // Set up the content pane.
-        final Image img = HighGui.toBufferedImage(matFrame);
+        final Image img = Java2DFrameUtils.toBufferedImage(matFrame);
 
         final JPanel sliderPanel = new JPanel();
         sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.Y_AXIS));
@@ -132,6 +141,8 @@ public class TresholdInRange {
         final JPanel framePanel = new JPanel();
         imgCaptureLabel = new JLabel(new ImageIcon(img));
         framePanel.add(imgCaptureLabel);
+        imgHsvLabel = new JLabel(new ImageIcon(img));
+        framePanel.add(imgHsvLabel);
         imgDetectionLabel = new JLabel(new ImageIcon(img));
         framePanel.add(imgDetectionLabel);
         frame.add(framePanel, BorderLayout.CENTER);
@@ -142,13 +153,9 @@ public class TresholdInRange {
 
     private static class CaptureTask extends SwingWorker<Void, Mat> {
         @Override
-        protected Void doInBackground() {
-            final Mat matFrame = new Mat();
+        protected Void doInBackground() throws FrameGrabber.Exception {
             while (!isCancelled()) {
-                if (!TresholdInRange.cap.read(matFrame)) {
-                    break;
-                }
-                publish(matFrame.clone());
+                publish(converter.convert(frameGrabber.grab()).clone());
             }
             return null;
         }
@@ -157,18 +164,21 @@ public class TresholdInRange {
         protected void process(final List<Mat> frames) {
             final Mat frame = frames.get(frames.size() - 1);
             final Mat frameHSV = new Mat();
-            Imgproc.cvtColor(frame, frameHSV, Imgproc.COLOR_BGR2HSV);
+            cvtColor(frame, frameHSV, COLOR_BGR2HSV);
+            bitwise_not(frameHSV, frameHSV);
             final Mat thresh = new Mat();
-            final Scalar lowerb = new Scalar(sliderLowH.getValue(), sliderLowS.getValue(), sliderLowV.getValue());
-            final Scalar upperb = new Scalar(sliderHighH.getValue(), sliderHighS.getValue(), sliderHighV.getValue());
-            Core.inRange(frameHSV, lowerb, upperb, thresh);
-            update(frame, thresh);
+            final Mat lowerb = new Mat(new int[]{sliderLowH.getValue(), sliderLowS.getValue(), sliderLowV.getValue()});
+            final Mat upperb = new Mat(new int[]{sliderHighH.getValue(), sliderHighS.getValue(), sliderHighV.getValue()});
+            inRange(frameHSV, lowerb, upperb, thresh);
+            update(frame, frameHSV, thresh);
+            
         }
 
-        private static void update(final Mat imgCapture, final Mat imgThresh) {
-            TresholdInRange.imgCaptureLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(imgCapture)));
-            TresholdInRange.imgDetectionLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(imgThresh)));
-            TresholdInRange.frame.repaint();
+        private static void update(final Mat imgCapture, final Mat imgHsv, final Mat imgThresh) {
+            imgCaptureLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(imgCapture)));
+            imgHsvLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(imgHsv)));
+            imgDetectionLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(imgThresh)));
+            frame.repaint();
         }
     }
 

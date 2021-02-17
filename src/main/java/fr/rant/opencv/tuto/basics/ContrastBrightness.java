@@ -1,14 +1,16 @@
 package fr.rant.opencv.tuto.basics;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.highgui.HighGui;
+import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.image.DataBufferByte;
+
+import static org.bytedeco.opencv.global.opencv_core.*;
 
 public class ContrastBrightness {
     public static final String WINDOWS_NAME = "Contrast and Brightness variations";
@@ -27,8 +29,9 @@ public class ContrastBrightness {
 
         initFrame(frame.getContentPane());
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setPreferredSize(new Dimension(1800, 900));
 
-        final Image img = HighGui.toBufferedImage(image);
+        final Image img = Java2DFrameUtils.toBufferedImage(image);
         final JPanel framePanel = new JPanel();
         final JLabel imgCaptureLabel = new JLabel(new ImageIcon(img));
         framePanel.add(imgCaptureLabel);
@@ -80,8 +83,7 @@ public class ContrastBrightness {
     }
 
     private static void update(final Mat image) {
-        final byte[] imageData = new byte[(int) (image.total() * image.channels())];
-        image.get(0, 0, imageData);
+        final byte[] imageData = ((DataBufferByte) Java2DFrameUtils.toBufferedImage(image).getRaster().getDataBuffer()).getData();
         final byte[] tempImageData = new byte[(int) (newImage.total() * newImage.channels())];
         for (int y = 0; y < image.rows(); y++) {
             final int cols = image.cols();
@@ -96,18 +98,18 @@ public class ContrastBrightness {
                 }
             }
         }
-        final Mat temp = Mat.zeros(image.size(), image.type());
-        temp.put(0, 0, tempImageData);
+        final Mat temp = new Mat(newImage.rows(), newImage.cols(), CV_8UC(newImage.channels()), new BytePointer(tempImageData));
 
-        final Mat lookUpTable = new Mat(1, 256, CvType.CV_8U);
+        Mat lookUpTable = new Mat(1, 256, CV_8U);
         final byte[] lookUpTableData = new byte[(int) (lookUpTable.total() * lookUpTable.channels())];
         for (int i = 0; i < lookUpTable.cols(); i++) {
             lookUpTableData[i] = saturate(Math.pow(i / 255.0, gammaSlider.getValue()) * 255.0);
         }
-        lookUpTable.put(0, 0, lookUpTableData);
-        Core.LUT(temp, lookUpTable, newImage);
+        lookUpTable = new Mat(1, 256, CV_8UC(1), new BytePointer(lookUpTableData));
+        LUT(temp, lookUpTable, newImage);
+        lookUpTable.close();
 
-        imgResultLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(newImage)));
+        imgResultLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(newImage)));
         frame.repaint();
     }
 

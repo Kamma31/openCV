@@ -1,14 +1,15 @@
 package fr.rant.opencv.tuto.processing.images;
 
 import fr.rant.opencv.Util;
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.highgui.HighGui;
+import org.bytedeco.javacv.Java2DFrameUtils;
+import org.bytedeco.opencv.opencv_core.Mat;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.bytedeco.opencv.global.opencv_core.addWeighted;
 
 public class AddingImages {
     private static JFrame frame;
@@ -48,17 +49,16 @@ public class AddingImages {
         });
         sliderPanel.add(slider);
         frame.add(sliderPanel, BorderLayout.PAGE_START);
-        imgLabel = new JLabel(new ImageIcon(HighGui.toBufferedImage(src2)));
+        imgLabel = new JLabel(new ImageIcon(Java2DFrameUtils.toBufferedImage(src2)));
         imgLabel.setBorder(new EmptyBorder(10, 10, 10, 10));
         frame.add(imgLabel, BorderLayout.CENTER);
     }
 
     static void update(final double alpha, final Mat src1, final Mat src2) {
         final Mat dst = new Mat();
-        Core.addWeighted(src1, alpha, src2, 1 - alpha, 0.0, dst);
-        final Image img = HighGui.toBufferedImage(dst);
+        addWeighted(src1, alpha, src2, 1 - alpha, 0.0, dst);
 
-        imgLabel.setIcon(new ImageIcon(img));
+        imgLabel.setIcon(new ImageIcon(Java2DFrameUtils.toBufferedImage(dst)));
         frame.repaint();
     }
 
